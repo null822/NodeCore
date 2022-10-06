@@ -1,0 +1,27 @@
+{
+  "config": {
+    "state": {
+      "Name": "nodecore:gravel"
+    },
+    "radius": {
+      "type": "minecraft:uniform",
+      "value": {
+        "min_inclusive": 2,
+        "max_inclusive": 5
+      }
+    },
+    "half_height": 2,
+    "targets": [
+      {
+        "Name": "nodecore:dirt"
+      },
+      {
+        "Properties": {
+          "snowy": "false"
+        },
+        "Name": "nodecore:grass_block"
+      }
+    ]
+  },
+  "type": "minecraft:disk"
+}

@@ -1,0 +1,17 @@
+{
+  "replace": false,
+  "values": [
+    "nodecore:leaves_acacia",
+    "nodecore:leaves_acacia_loose",
+    "nodecore:leaves_birch",
+    "nodecore:leaves_birch_loose",
+    "nodecore:leaves_dark_oak",
+    "nodecore:leaves_dark_oak_loose",
+    "nodecore:leaves_jungle",
+    "nodecore:leaves_jungle_loose",
+    "nodecore:leaves_oak",
+    "nodecore:leaves_oak_loose",
+    "nodecore:leaves_spruce",
+    "nodecore:leaves_spruce_loose"
+  ]
+}
