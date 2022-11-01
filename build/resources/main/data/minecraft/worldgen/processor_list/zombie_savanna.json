@@ -43,7 +43,7 @@
             "Name": "minecraft:cobweb"
           },
           "input_predicate": {
-            "block": "minecraft:acacia_planks",
+            "block": "nodecore:planks_acacia",
             "probability": 0.2,
             "predicate_type": "minecraft:random_block_match"
           },

@@ -4,7 +4,7 @@
       "rules": [
         {
           "output_state": {
-            "Name": "minecraft:oak_planks"
+            "Name": "nodecore:planks_oak"
           },
           "input_predicate": {
             "block": "nodecore:dirt_path",
