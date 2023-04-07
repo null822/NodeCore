@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "nodecore:log_spruce",
+    "nodecore:wood_spruce",
+    "nodecore:log_spruce_stripped",
+    "nodecore:wood_spruce_stripped"
+  ]
+}

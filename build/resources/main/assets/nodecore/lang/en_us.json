@@ -59,6 +59,8 @@
   "block.nodecore.log_spruce_stripped": "Stripped Log",
   "block.nodecore.wood_spruce": "Wood",
   "block.nodecore.wood_spruce_stripped": "Stripped Wood",
-  "block.nodecore.planks_spruce": "Planks"
+  "block.nodecore.planks_spruce": "Planks",
+
+  "itemGroup.NodeCore": "NodeCore"
 
 }

@@ -13,9 +13,9 @@
  */
 package com.null8.nodecore;
 
-import com.null8.nodecore.init.NodeCoreBlockEntities;
-import com.null8.nodecore.init.NodeCoreBlocks;
-import com.null8.nodecore.init.NodeCoreItems;
+import com.null8.nodecore.common.init.NodeCoreBlockEntities;
+import com.null8.nodecore.common.init.NodeCoreBlocks;
+import com.null8.nodecore.common.init.NodeCoreItems;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -33,19 +33,21 @@ import java.util.function.Supplier;
 
 @Mod("nodecore")
 public class NodeCore {
-    public static final Logger LOGGER = LogManager.getLogger(NodeCore.class);
+    public static final Logger LOGGER = LogManager.getLogger();
     public static final String MODID = "nodecore";
     private static final String PROTOCOL_VERSION = "1";
     public static final SimpleChannel PACKET_HANDLER = NetworkRegistry.newSimpleChannel(new ResourceLocation(MODID, MODID), () -> PROTOCOL_VERSION,
             PROTOCOL_VERSION::equals, PROTOCOL_VERSION::equals);
     private static int messageID = 0;
 
+
     public NodeCore() {
 
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
         NodeCoreBlocks.REGISTRY.register(bus);
         NodeCoreItems.REGISTRY.register(bus);
-        NodeCoreBlockEntities.REGISTRY.register(bus);
+        NodeCoreBlockEntities.BLOCK_ENTITIES.register(bus);
+
 
     }
 

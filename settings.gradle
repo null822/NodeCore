@@ -1,0 +1,3 @@
+include 'src:UncraftedMinecraft'
+findProject(':src:UncraftedMinecraft')?.name = 'UncraftedMinecraft'
+

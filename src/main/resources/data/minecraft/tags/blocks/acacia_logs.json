@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "nodecore:log_acacia",
+    "nodecore:wood_acacia",
+    "nodecore:log_acacia_stripped",
+    "nodecore:wood_acacia_stripped"
+  ]
+}
