@@ -9,7 +9,6 @@ import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
@@ -38,7 +37,8 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.items.ItemHandlerHelper;
-import net.minecraftforge.network.NetworkHooks;
+
+import javax.annotation.ParametersAreNonnullByDefault;
 
 import static com.null8.nodecore.common.block.entity.ItemBlockEntity.containedItem;
 
@@ -50,8 +50,6 @@ public class ItemBlock extends FallingBlock implements SimpleWaterloggedBlock, E
                 .isRedstoneConductor((bs, br, bp) -> false).dynamicShape());
         this.registerDefaultState(this.stateDefinition.any().setValue(WATERLOGGED, false));
     }
-
-
 
     @OnlyIn(Dist.CLIENT)
     public static void registerRenderLayer() {
@@ -152,19 +150,6 @@ public class ItemBlock extends FallingBlock implements SimpleWaterloggedBlock, E
         return RenderShape.ENTITYBLOCK_ANIMATED;
     }
 
-    /*
-    @Override
-    public void attack(BlockState state, Level level, BlockPos pos, Player player) {
-        if (!level.isClientSide && level.getBlockEntity(pos) instanceof final ItemBlockEntity itemblock) {
-            if (player.isCrouching()) {
-                itemblock.prependStack(player);
-            } else {
-                itemblock.prependItem(player);
-            }
-        }
-    }
-    */
-
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
                                                                   BlockEntityType<T> beType) {
@@ -179,15 +164,12 @@ public class ItemBlock extends FallingBlock implements SimpleWaterloggedBlock, E
 
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand,
-                                 BlockHitResult result) {
-        if (!level.isClientSide && level.getBlockEntity(pos) instanceof final ItemBlockEntity itemblock) {
+    @ParametersAreNonnullByDefault
+    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult result) {
+        if (level.getBlockEntity(pos) instanceof final ItemBlockEntity itemblock) {
             if (!player.isCrouching()) {
 
                 BlockEntity be = level.getBlockEntity(pos);
-
-                NetworkHooks.openGui(((ServerPlayer)player), (MenuProvider) be, pos);
-
 
                 // get stacks
                 ItemStack stack = player.getItemInHand(hand);
@@ -210,10 +192,8 @@ public class ItemBlock extends FallingBlock implements SimpleWaterloggedBlock, E
                 containedItem = itemblock.getItemInSlot(0);
 
 
-                Minecraft.getInstance().player.chat("remainingStack: " + remainingStack + " stack: " + stack);
+                return InteractionResult.sidedSuccess(level.isClientSide);
 
-            } else {
-                Minecraft.getInstance().player.chat("count: " + itemblock.getItemInSlot(0).getCount() + " item: " + itemblock.getItemInSlot(0).getItem());
 
             }
 

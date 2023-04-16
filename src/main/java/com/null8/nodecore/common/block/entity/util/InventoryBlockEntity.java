@@ -2,16 +2,12 @@ package com.null8.nodecore.common.block.entity.util;
 
 import com.null8.nodecore.networking.ModMessages;
 import com.null8.nodecore.networking.packet.ItemStackSyncS2CPacket;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.capabilities.Capability;
@@ -19,7 +15,7 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.ItemStackHandler;
 
-public class InventoryBlockEntity extends BlockEntity {
+public class InventoryBlockEntity extends NodeCoreBlockEntity {
     public final int size;
     protected int timer;
     protected boolean requiresUpdate;
@@ -61,11 +57,6 @@ public class InventoryBlockEntity extends BlockEntity {
     }
 
     @Override
-    public Packet<ClientGamePacketListener> getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
-    }
-
-    @Override
     public CompoundTag getUpdateTag() {
         return serializeNBT();
     }
@@ -78,8 +69,6 @@ public class InventoryBlockEntity extends BlockEntity {
 
     public ItemStack insertItem(int slot, ItemStack stack) {
 
-        BlockState oldblockState = this.getBlockState();
-
         final ItemStack copy = stack.copy();
         stack.shrink(copy.getCount());
         update();
@@ -88,9 +77,12 @@ public class InventoryBlockEntity extends BlockEntity {
         if(!level.isClientSide() && this.handler.resolve().isPresent()) {
 
             ModMessages.sendToClients(new ItemStackSyncS2CPacket(this.handler.resolve().get(), worldPosition));
-            Minecraft.getInstance().player.chat("Updated!");
 
         }
+
+        markForBlockUpdate();
+        markForSync();
+
         return this.handler.map(inv -> inv.insertItem(slot, copy, false)).orElse(ItemStack.EMPTY);
     }
 
@@ -100,11 +92,6 @@ public class InventoryBlockEntity extends BlockEntity {
         this.handler.invalidate();
     }
 
-    @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
-        this.inventory.deserializeNBT(tag.getCompound("Inventory"));
-    }
 
     @Override
     public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt) {
@@ -122,7 +109,6 @@ public class InventoryBlockEntity extends BlockEntity {
     }
 
     public void update() {
-        Minecraft.getInstance().player.chat("update()");
 
         requestModelDataUpdate();
         setChanged();

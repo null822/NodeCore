@@ -4,7 +4,7 @@ import com.null8.nodecore.common.block.entity.util.InventoryBlockEntity;
 import com.null8.nodecore.common.init.NodeCoreBlockEntities;
 import com.null8.nodecore.networking.ModMessages;
 import com.null8.nodecore.networking.packet.ItemStackSyncS2CPacket;
-import com.null8.nodecore.util.ForgeCapabilities;
+import com.null8.nodecore.util.Capabilities;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -19,7 +19,6 @@ import org.jetbrains.annotations.Nullable;
 
 public class ItemBlockEntity extends InventoryBlockEntity {
 
-    private static final int LIMIT = (int) Math.pow(2, 15);
     public LazyOptional<IItemHandler> lazyItemHandler = LazyOptional.empty();
 
     public ItemBlockEntity(BlockPos pos, BlockState state) {
@@ -30,7 +29,6 @@ public class ItemBlockEntity extends InventoryBlockEntity {
         @Override
         protected void onContentsChanged(int slot) {
             setChanged();
-            Minecraft.getInstance().player.chat("Contents Changed!");
 
             if(!level.isClientSide()) {
                 ModMessages.sendToClients(new ItemStackSyncS2CPacket(this, worldPosition));
@@ -78,7 +76,7 @@ public class ItemBlockEntity extends InventoryBlockEntity {
     public @NotNull <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap, @Nullable Direction side) {
 
 
-        if (cap == ForgeCapabilities.ITEM_HANDLER) {
+        if (cap == Capabilities.ITEM) {
             if (side == null) {
                 return lazyItemHandler.cast();
             }
@@ -95,4 +93,5 @@ public class ItemBlockEntity extends InventoryBlockEntity {
         lazyItemHandler.invalidate();
 
     }
+
 }
