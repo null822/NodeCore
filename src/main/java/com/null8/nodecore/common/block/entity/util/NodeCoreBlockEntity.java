@@ -65,7 +65,7 @@ public abstract class NodeCoreBlockEntity extends BlockEntity
     }
 
     @Override
-    public final void load(CompoundTag tag)
+    public void load(CompoundTag tag)
     {
         loadAdditional(tag);
         super.load(tag);
@@ -75,12 +75,15 @@ public abstract class NodeCoreBlockEntity extends BlockEntity
      * Override to save block entity specific data.
      */
     @Override
-    protected void saveAdditional(CompoundTag tag) {}
+    protected void saveAdditional(CompoundTag tag) {
+    }
 
     /**
      * Override to load block entity specific data.
      */
-    protected void loadAdditional(CompoundTag tag) {}
+    protected void loadAdditional(CompoundTag tag) {
+
+    }
 
     /**
      * Syncs the block entity data to client via means of a block update.

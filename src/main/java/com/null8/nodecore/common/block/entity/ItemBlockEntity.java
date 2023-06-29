@@ -2,59 +2,33 @@ package com.null8.nodecore.common.block.entity;
 
 import com.null8.nodecore.common.block.entity.util.InventoryBlockEntity;
 import com.null8.nodecore.common.init.NodeCoreBlockEntities;
-import com.null8.nodecore.networking.ModMessages;
-import com.null8.nodecore.networking.packet.ItemStackSyncS2CPacket;
-import com.null8.nodecore.util.Capabilities;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemStackHandler;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-public class ItemBlockEntity extends InventoryBlockEntity {
+import java.util.Objects;
 
-    public LazyOptional<IItemHandler> lazyItemHandler = LazyOptional.empty();
+import static com.null8.nodecore.NodeCore.MODID;
+import static com.null8.nodecore.util.Util.mergeStacks;
+
+public class ItemBlockEntity extends InventoryBlockEntity<ItemStackHandler> {
+
+    private static final Component NAME = new TranslatableComponent(MODID + ".block_entity.tool_rack");
 
     public ItemBlockEntity(BlockPos pos, BlockState state) {
-        super(NodeCoreBlockEntities.ITEM_BLOCK.get(), pos, state, 1);
-    }
-
-    private final ItemStackHandler itemHandler = new ItemStackHandler(1) {
-        @Override
-        protected void onContentsChanged(int slot) {
-            setChanged();
-
-            if(!level.isClientSide()) {
-                ModMessages.sendToClients(new ItemStackSyncS2CPacket(this, worldPosition));
-            }
-        }
-
-        @Override
-        public boolean isItemValid(int slot, @NotNull ItemStack stack) {
-            return true;
-        }
-
-    };
-
-
-    public void setHandler(ItemStackHandler itemStackHandler) {
-        for (int i = 0; i < itemStackHandler.getSlots(); i++) {
-            itemHandler.setStackInSlot(i, itemStackHandler.getStackInSlot(i));
-        }
+        super(NodeCoreBlockEntities.ITEM_BLOCK.get(), pos, state, defaultInventory(1), NAME);
     }
 
 
     public ItemStack getRenderStack() {
-
-        Minecraft.getInstance().player.chat(getItemInSlot(0).toString());
         return getItemInSlot(0);
-
     }
 
     public void tick() {
@@ -66,32 +40,82 @@ public class ItemBlockEntity extends InventoryBlockEntity {
 
     }
 
-    @Override
-    public void onLoad() {
-        super.onLoad();
-        lazyItemHandler = LazyOptional.of(() -> itemHandler);
-    }
+    public InteractionResult onRightClick(Player player, int slot)
+    {
+        assert level != null;
+        final ItemStack heldItem;
 
-    @Override
-    public @NotNull <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap, @Nullable Direction side) {
+        if (!player.isShiftKeyDown()) {
+            heldItem = player.getMainHandItem().copy();
+        } else {
+            heldItem = player.getMainHandItem().split(1).copy();
+        }
 
+        final boolean shouldExtract = !inventory.getStackInSlot(slot).isEmpty();
+        final boolean shouldInsert = !heldItem.isEmpty();
 
-        if (cap == Capabilities.ITEM) {
-            if (side == null) {
-                return lazyItemHandler.cast();
+        if (shouldExtract) {
+            if (shouldInsert) {
+                // Merge stacks
+                if (heldItem.getMaxStackSize() > 1 && heldItem.getItem().equals(inventory.getStackInSlot(slot).getItem())) {
+
+                    if (inventory.getStackInSlot(slot).getCount() == inventory.getStackInSlot(slot).getMaxStackSize()) {
+                        ItemStack[] stacks = mergeStacks(inventory.getStackInSlot(slot), heldItem);
+
+                        inventory.setStackInSlot(slot, stacks[1]);
+                        player.setItemInHand(player.getUsedItemHand(), stacks[0]);
+
+                    } else {
+                        ItemStack[] stacks = mergeStacks(inventory.getStackInSlot(slot), heldItem);
+
+                        inventory.setStackInSlot(slot, stacks[0]);
+                        player.setItemInHand(player.getUsedItemHand(), stacks[1]);
+                    }
+
+                    player.playSound(SoundEvents.WOOD_PLACE, 1, 1);
+                    update();
+
+                    // Swap stacks
+                } else if (!heldItem.equals(inventory.getStackInSlot(slot))) {
+
+                    final ItemStack extracted = inventory.extractItem(slot, inventory.getStackInSlot(slot).getCount(), false);
+                    inventory.insertItem(slot, heldItem, false);
+                    player.setItemInHand(player.getUsedItemHand(), extracted);
+
+                    player.playSound(SoundEvents.WOOD_PLACE, 1, 1);
+                    update();
+                }
+            } else {
+
+                // Just extract
+                final ItemStack extracted = inventory.extractItem(slot, inventory.getStackInSlot(slot).getCount(), false);
+                player.setItemInHand(player.getUsedItemHand(), extracted);
+
+                player.playSound(SoundEvents.WOOD_PLACE, 1, 1);
+                update();
+            }
+        } else {
+            if (shouldInsert) {
+                // Just insert
+                final ItemStack remaining = inventory.insertItem(slot, heldItem, false);
+                player.setItemInHand(player.getUsedItemHand(), remaining);
+
+                player.playSound(SoundEvents.WOOD_PLACE, 1, 1);
+                update();
+            } else {
+                return InteractionResult.FAIL;
             }
         }
 
+        if (this.inventory.getStackInSlot(0) == ItemStack.EMPTY) {
+            Objects.requireNonNull(this.getLevel()).setBlock(this.getBlockPos(), Blocks.AIR.defaultBlockState(), 0);
+        }
 
-        return super.getCapability(cap, side);
+        return InteractionResult.SUCCESS;
     }
 
-    @Override
-    public void invalidateCaps() {
-        super.invalidateCaps();
-        this.handler.invalidate();
-        lazyItemHandler.invalidate();
-
+    public void setStackInSlot(int slot, ItemStack itemStack) {
+        inventory.setStackInSlot(slot, itemStack);
+        update();
     }
-
 }

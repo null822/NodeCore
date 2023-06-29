@@ -1,59 +1,57 @@
 package com.null8.nodecore.common.block.entity.util;
 
-import com.null8.nodecore.networking.ModMessages;
-import com.null8.nodecore.networking.packet.ItemStackSyncS2CPacket;
+import com.null8.nodecore.util.ISlotCallback;
+import com.null8.nodecore.util.InventoryItemHandler;
+import com.null8.nodecore.util.SidedHandler;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.items.CapabilityItemHandler;
+import net.minecraftforge.common.util.INBTSerializable;
+import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.IItemHandlerModifiable;
 import net.minecraftforge.items.ItemStackHandler;
+import org.jetbrains.annotations.Nullable;
 
-public class InventoryBlockEntity extends NodeCoreBlockEntity {
-    public final int size;
-    protected int timer;
+public class InventoryBlockEntity<C extends IItemHandlerModifiable & INBTSerializable<CompoundTag>> extends NodeCoreBlockEntity implements ISlotCallback {
     protected boolean requiresUpdate;
 
-    public static ItemStack containedItem = ItemStack.EMPTY;
+    protected final C inventory;
+    protected final SidedHandler.Builder<IItemHandler> sidedInventory;
+    @Nullable protected Component customName;
+    protected Component defaultName;
 
-    public final ItemStackHandler inventory;
-    protected LazyOptional<ItemStackHandler> handler;
-
-    public InventoryBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state, int size) {
+    public InventoryBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state, InventoryFactory<C> inventoryFactory, Component defaultName) {
         super(type, pos, state);
-        if (size <= 0) {
-            size = 1;
-        }
 
-        this.size = size;
-        this.inventory = createInventory();
-        this.handler = LazyOptional.of(() -> this.inventory);
+        this.inventory = inventoryFactory.create(this);
+        this.sidedInventory = new SidedHandler.Builder<>(InventoryBlockEntity.this.inventory);
+        this.defaultName = defaultName;
     }
 
-    public ItemStack extractItem(int slot) {
-        final int count = getItemInSlot(slot).getCount();
-        this.requiresUpdate = true;
-        return this.handler.map(inv -> inv.extractItem(slot, count, false)).orElse(ItemStack.EMPTY);
+    public Component getDisplayName()
+    {
+        return customName == null ? defaultName : customName;
     }
 
-    @Override
-    public <T> LazyOptional<T> getCapability(Capability<T> cap, Direction side) {
-        return cap == CapabilityItemHandler.ITEM_HANDLER_CAPABILITY ? this.handler.cast()
-                : super.getCapability(cap, side);
+    public void setCustomName(Component customName)
+    {
+        this.customName = customName;
     }
 
-    public LazyOptional<ItemStackHandler> getHandler() {
-        return this.handler;
+
+    public static InventoryFactory<ItemStackHandler> defaultInventory(int slots)
+    {
+        return self -> new InventoryItemHandler(self, slots);
     }
+
 
     public ItemStack getItemInSlot(int slot) {
-        return this.handler.map(inv -> inv.getStackInSlot(slot)).orElse(ItemStack.EMPTY);
+        return inventory.getStackInSlot(slot);
     }
 
     @Override
@@ -67,31 +65,11 @@ public class InventoryBlockEntity extends NodeCoreBlockEntity {
         load(tag);
     }
 
-    public ItemStack insertItem(int slot, ItemStack stack) {
-
-        final ItemStack copy = stack.copy();
-        stack.shrink(copy.getCount());
-        update();
-        this.requiresUpdate = true;
-
-        if(!level.isClientSide() && this.handler.resolve().isPresent()) {
-
-            ModMessages.sendToClients(new ItemStackSyncS2CPacket(this.handler.resolve().get(), worldPosition));
-
-        }
-
-        markForBlockUpdate();
-        markForSync();
-
-        return this.handler.map(inv -> inv.insertItem(slot, copy, false)).orElse(ItemStack.EMPTY);
-    }
-
     @Override
-    public void invalidateCaps() {
-        super.invalidateCaps();
-        this.handler.invalidate();
+    public void load(CompoundTag tag) {
+        super.load(tag);
+        this.inventory.deserializeNBT(tag.getCompound("Inventory"));
     }
-
 
     @Override
     public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt) {
@@ -105,6 +83,8 @@ public class InventoryBlockEntity extends NodeCoreBlockEntity {
             update();
             this.requiresUpdate = false;
         }
+
+
 
     }
 
@@ -123,19 +103,19 @@ public class InventoryBlockEntity extends NodeCoreBlockEntity {
         tag.put("Inventory", this.inventory.serializeNBT());
     }
 
-    private ItemStackHandler createInventory() {
-        return new ItemStackHandler(this.size) {
-            @Override
-            public ItemStack extractItem(int slot, int amount, boolean simulate) {
-                InventoryBlockEntity.this.update();
-                return super.extractItem(slot, amount, simulate);
-            }
+    @Override
+    protected void loadAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
+        tag.get("Inventory");
+    }
 
-            @Override
-            public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-                InventoryBlockEntity.this.update();
-                return super.insertItem(slot, stack, simulate);
-            }
-        };
+
+    /**
+     * A factory interface for the inventory field, allows self references in the constructor
+     */
+    @FunctionalInterface
+    public interface InventoryFactory<C extends IItemHandlerModifiable & INBTSerializable<CompoundTag>>
+    {
+        C create(InventoryBlockEntity<C> entity);
     }
 }

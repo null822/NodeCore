@@ -1,17 +1,15 @@
 package com.null8.nodecore.common.block.blocks.other;
 
-import com.null8.nodecore.common.api.FallingBlock;
+import com.null8.nodecore.common.api.UnstableBlock;
 import com.null8.nodecore.common.block.entity.ItemBlockEntity;
 import com.null8.nodecore.common.init.NodeCoreBlockEntities;
 import com.null8.nodecore.common.init.NodeCoreBlocks;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -40,9 +38,8 @@ import net.minecraftforge.items.ItemHandlerHelper;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
-import static com.null8.nodecore.common.block.entity.ItemBlockEntity.containedItem;
 
-public class ItemBlock extends FallingBlock implements SimpleWaterloggedBlock, EntityBlock {
+public class ItemBlock extends UnstableBlock implements SimpleWaterloggedBlock, EntityBlock {
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
 
     public ItemBlock() {
@@ -99,19 +96,19 @@ public class ItemBlock extends FallingBlock implements SimpleWaterloggedBlock, E
 
     @Override
     public ItemStack getCloneItemStack(BlockState state, HitResult target, BlockGetter world, BlockPos pos, Player player) {
-        return new ItemStack(Blocks.AIR); // set to contents
-    }
 
+        if (world.getBlockEntity(pos) instanceof final ItemBlockEntity itemblock) {
+            return itemblock.getItemInSlot(0);
+        } else {
+            return ItemStack.EMPTY;
+        }
+
+    }
     @Override
     public PushReaction getPistonPushReaction(BlockState state) {
         return PushReaction.DESTROY;
     }
 
-    @Override
-    public MenuProvider getMenuProvider(BlockState state, Level worldIn, BlockPos pos) {
-        BlockEntity tileEntity = worldIn.getBlockEntity(pos);
-        return tileEntity instanceof MenuProvider menuProvider ? menuProvider : null;
-    }
 
     @Override
     public boolean triggerEvent(BlockState state, Level world, BlockPos pos, int eventID, int eventParam) {
@@ -136,8 +133,6 @@ public class ItemBlock extends FallingBlock implements SimpleWaterloggedBlock, E
         if (entity != null && level.getBlockEntity(pos) instanceof final ItemBlockEntity itemblock) {
 
             ItemStack stack = itemblock.getItemInSlot(0);
-
-            Minecraft.getInstance().player.chat("" + stack.getItem()  + " " + stack.getCount());
 
             ItemHandlerHelper.giveItemToPlayer(entity, stack);
         }
@@ -166,44 +161,13 @@ public class ItemBlock extends FallingBlock implements SimpleWaterloggedBlock, E
     @Override
     @ParametersAreNonnullByDefault
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult result) {
-        if (level.getBlockEntity(pos) instanceof final ItemBlockEntity itemblock) {
-            if (!player.isCrouching()) {
-
-                BlockEntity be = level.getBlockEntity(pos);
-
-                // get stacks
-                ItemStack stack = player.getItemInHand(hand);
-                ItemStack contained = itemblock.getItemInSlot(0);
-
-                // get values
-                int max = contained.getMaxStackSize();
-                int remainingSpace = max - contained.getCount();
-
-                ItemStack remainingStack = stack.copy();
-
-                // calculate remaining items
-                remainingStack.setCount(remainingStack.getCount() - remainingSpace);
-                stack.setCount(remainingSpace);
-
-                // insert items
-                player.setItemInHand(hand, remainingStack);
-                itemblock.insertItem(0, stack);
-
-                containedItem = itemblock.getItemInSlot(0);
-
-
-                return InteractionResult.sidedSuccess(level.isClientSide);
-
-
+        {
+            ItemBlockEntity itemBlock = level.getBlockEntity(pos, NodeCoreBlockEntities.ITEM_BLOCK.get()).orElse(null);
+            if (itemBlock != null) {
+                return itemBlock.onRightClick(player, 0);
             }
-
-            itemblock.update();
+            return InteractionResult.PASS;
         }
 
-
-        return InteractionResult.SUCCESS;
-
     }
-
-
 }
